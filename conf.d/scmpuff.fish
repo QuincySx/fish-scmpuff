@@ -10,7 +10,6 @@ alias gs=scmpuff_status
 
 
 function git
-    echo "git command $argv"
     type -q $SCMPUFF_GIT_CMD; or set -x SCMPUFF_GIT_CMD (which git)
 
     if test (count $argv) -eq 0
