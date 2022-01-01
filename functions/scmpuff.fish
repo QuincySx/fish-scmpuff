@@ -1,22 +1,30 @@
-# Remove any existing git alias or function
-unalias git > /dev/null 2>&1
-functions -e git > /dev/null 2>&1
+function scmpuff_clear_vars
+    set -l scmpuff_env_char "e"
+    set -l scmpuff_env_vars (set -x | awk '{print $1}' | grep -E '^'$scmpuff_env_char'\d+')
 
-# User the full path to git to avoid infinite loop with git function
-set -x SCMPUFF_GIT_CMD (which git)
+    for v in $scmpuff_env_vars
+        set -e $v
+    end
+end
 
-# Wrap git with the 'hub' github wrapper, if installed
-if type hub > /dev/null 2>&1; set -x SCMPUFF_GIT_CMD "hub"; end
 
-function git
-  switch $1
-  case commit blame log rebase merge
-    eval "scmpuff expand --"$SCMPUFF_GIT_CMD" "$@
-  case checkout diff rm reset
-    eval "scmpuff expand --relative -- "$SCMPUFF_GIT_CMD" "$@
-  case add
-    eval "scmpuff expand -- "$SCMPUFF_GIT_CMD" "$@
-    scmpuff_status
-  case '*'
-    eval $SCMPUFF_GIT_CMD $@
+function scmpuff_status
+    scmpuff_clear_vars
+    set -lx scmpuff_env_char "e"
+    set -l cmd_output (/usr/bin/env scmpuff status --filelist $argv ^/dev/null)
+    set -l es "$status"
+
+    if test $es -ne 0
+        git status
+        return $status
+    end
+
+    set -l files (string split \t $cmd_output[1])
+    for e in (seq (count $files))
+        set -gx "$scmpuff_env_char""$e" "$files[$e]"
+    end
+
+    for line in $cmd_output[2..-1]
+        echo $line
+    end
 end
